@@ -1,7 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=train_mse_all
 #SBATCH --partition=gpu-1xA100
-#SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
 #SBATCH --time=12:00:00
