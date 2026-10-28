@@ -12,7 +12,7 @@ cd "$SLURM_SUBMIT_DIR"
 source config.sh
 source "$VENV_DIR/bin/activate"
 
-export TQDM_MININTERVAL=60  # one progress line per minute instead of flooding the log
+export TQDM_MININTERVAL=10  # progress update at most every 10 s
 
 echo "job $SLURM_JOB_ID on $(hostname), LOKA_ROOT=$LOKA_ROOT"
 nvidia-smi
