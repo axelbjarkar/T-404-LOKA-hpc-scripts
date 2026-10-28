@@ -36,7 +36,7 @@ echo "== tiny end-to-end run"
 TMP="${TMPDIR:-/tmp}/check_env_$SLURM_JOB_ID"
 trap 'rm -rf "$TMP"' EXIT
 mkdir -p "$TMP/data" "$TMP/exp"
-head -5000 "$LOKA_ROOT/game_states/data/o.txt" > "$TMP/data/o.txt"
+head -5000 "$LOKA_ROOT/data/game_states/o.txt" > "$TMP/data/o.txt"
 cp experiments/*.py "$TMP/exp/"
 sed -i 's/^STEPS = .*/STEPS = 2/; s/^EPOCHS = .*/EPOCHS = 2/' "$TMP/exp/train_mse_all.py"
 
