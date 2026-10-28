@@ -30,7 +30,7 @@ echo "== imports"
 python -c "import loka, torch, torchvision, numpy, pandas, matplotlib, tqdm; print('torch', torch.__version__, 'cuda available:', torch.cuda.is_available())"
 
 echo "== data"
-ls -l "$LOKA_ROOT/data/o.txt"
+ls -l "$LOKA_ROOT/data/game_states/o.txt"
 
 echo "== tiny end-to-end run"
 TMP="${TMPDIR:-/tmp}/check_env_$SLURM_JOB_ID"
