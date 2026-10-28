@@ -16,7 +16,7 @@ from loka.embeddings import with_counts, with_near_goal, with_counts_and_near_go
 
 # ---- CONFIG: input / output locations ----
 ROOT          = Path(os.environ.get("LOKA_ROOT", "/CHANGE/ME/T-404-LOKA"))
-SOURCE_STATES = ROOT / "data/o.txt"                       # all of E, also the "random" ordering
+SOURCE_STATES = ROOT / "data/game_states/o.txt"                       # all of E, also the "random" ordering
 ORDERED_DIR   = ROOT / "data/ordered-data"                # positions-only orderings
 EMB_DIR       = ROOT / "data/ordered-data/embeddings"     # embedding orderings
 RESULTS_DIR   = ROOT / "data/ordered-data/results/mse_all"

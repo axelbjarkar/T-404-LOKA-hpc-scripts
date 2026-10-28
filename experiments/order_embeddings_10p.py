@@ -10,7 +10,7 @@ from loka.embeddings import with_counts, with_near_goal, with_counts_and_near_go
 
 # ---- CONFIG: input / output locations ----
 ROOT          = Path(os.environ.get("LOKA_ROOT", "/CHANGE/ME/T-404-LOKA"))
-SOURCE_STATES = ROOT / "data/o.txt"
+SOURCE_STATES = ROOT / "data/game_states/o.txt"
 EMB_DIR       = ROOT / "data/ordered-data/embeddings"
 
 # ---- CONFIG: experiment settings ----

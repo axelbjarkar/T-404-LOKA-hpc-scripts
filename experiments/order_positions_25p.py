@@ -9,7 +9,7 @@ from loka.geometrical_methods import herding_order, k_center_order
 
 # ---- CONFIG: input / output locations ----
 ROOT          = Path(os.environ.get("LOKA_ROOT", "/CHANGE/ME/T-404-LOKA"))
-SOURCE_STATES = ROOT / "data/o.txt"
+SOURCE_STATES = ROOT / "data/game_states/o.txt"
 ORDERED_DIR   = ROOT / "data/ordered-data"
 
 # ---- CONFIG: experiment settings ----
