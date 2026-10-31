@@ -21,7 +21,7 @@ FORGETTING_FILE = ROOT / "data/forgetting_counts/forgetting_o.txt"   # all of E,
 RESULTS_DIR     = ROOT / "data/forgetting_counts/herding_and_forgetting"
 
 # ---- CONFIG: experiment settings ----
-HERDING_RATIOS = [0.8, 0.6, 0.4, 0.2]   # share of the epochs spent on herding data, the rest on forgetting data
+HERDING_RATIOS = [0.95, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2]   # share of the epochs spent on herding data, the rest on forgetting data
 START = 0.01
 END = 0.1
 STEPS = 50
