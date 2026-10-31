@@ -11,6 +11,7 @@ import torch.nn.functional as F
 from tqdm import tqdm
 
 from loka.data import load_breakthrough_states
+from loka.report import ExperimentReport, config_from_globals
 from loka.models import get_breakthrough_cnn
 from loka.embeddings import with_counts, with_near_goal, with_counts_and_near_goal
 
@@ -30,6 +31,8 @@ BATCH_SIZE = 512
 EVAL_BS = 1024
 LR = 0.001
 SEED = 42
+OPTIMIZER = "Adam"   # torch.optim name
+LOSS = "MSELoss"     # torch.nn name
 
 # (csv name, ordered file); names match the CSVs Aggregation already plots
 POSITION_INPUTS = [
@@ -71,7 +74,7 @@ def collect_inputs():
     return inputs
 
 
-def train_one(name, path, emb, X_all, Y_all_t, csv_file):
+def train_one(rep, name, path, emb, X_all, Y_all_t, csv_file):
     total_data_amount = X_all.shape[0]
     splits = np.linspace(START, END, num=STEPS, endpoint=True)
     mse_values = []
@@ -81,6 +84,7 @@ def train_one(name, path, emb, X_all, Y_all_t, csv_file):
     # load the ordered subset and apply the embedding it was selected with
     X, Y = load_breakthrough_states(path)
     X = emb(X)
+    rep.add_data(name, path)
 
     # full dataset through the same embedding, for evaluation
     X_all_t = torch.FloatTensor(emb(X_all)).to(device)
@@ -91,8 +95,10 @@ def train_one(name, path, emb, X_all, Y_all_t, csv_file):
 
         model = get_breakthrough_cnn(X_train).to(device)  # channels sized to the embedding
 
-        optimizer = torch.optim.Adam(model.parameters(), lr=LR)
-        loss_fn = nn.MSELoss()
+        optimizer = getattr(torch.optim, OPTIMIZER)(model.parameters(), lr=LR)
+        loss_fn = getattr(nn, LOSS)()
+        if m == 0:
+            rep.add_model(name, model, input_shape=list(X_train.shape[1:]), embedding=emb.__name__)
 
         X_train_t = torch.FloatTensor(X_train).to(device)
         Y_train_t = torch.FloatTensor(Y_train).to(device)
@@ -119,6 +125,7 @@ def train_one(name, path, emb, X_all, Y_all_t, csv_file):
                 n += yb.numel()
         mse = sq_err / n
         mse_values.append(mse)
+        rep.log_metric(f'{name}/mse_E', mse, step=float(ratio))
         prc_values.append(ratio)
 
         # free GPU memory before the next model
@@ -135,25 +142,29 @@ def train_one(name, path, emb, X_all, Y_all_t, csv_file):
     # one row per split: training ratio and MSE
     pd.DataFrame({'ratio': prc_values, 'mse': mse_values}).to_csv(csv_file, index=False)
     print(f'wrote {csv_file}')
+    rep.add_output(csv_file, input=name)
 
 
 def main():
     print(device)
     os.makedirs(RESULTS_DIR, exist_ok=True)
 
-    X_all, Y_all = load_breakthrough_states(SOURCE_STATES, two_channel=True)
-    Y_all_t = torch.FloatTensor(Y_all).to(device)
-    print(f'loaded {len(X_all)} states from {SOURCE_STATES}')
+    with ExperimentReport('train_mse_all', config=config_from_globals(globals())) as rep:
+        rep.add_data('source_states (E)', SOURCE_STATES)
+        X_all, Y_all = load_breakthrough_states(SOURCE_STATES, two_channel=True)
+        Y_all_t = torch.FloatTensor(Y_all).to(device)
+        print(f'loaded {len(X_all)} states from {SOURCE_STATES}')
 
-    for name, path, emb in collect_inputs():
-        csv_file = RESULTS_DIR / f'{name}.csv'
-        if csv_file.exists():
-            print(f'skipping {name}: {csv_file} already exists')
-            continue
-        if not Path(path).exists():
-            print(f'Warning: skipping {name}: input not found: {path}')
-            continue
-        train_one(name, path, emb, X_all, Y_all_t, csv_file)
+        for name, path, emb in collect_inputs():
+            csv_file = RESULTS_DIR / f'{name}.csv'
+            if csv_file.exists():
+                print(f'skipping {name}: {csv_file} already exists')
+                rep.add_skipped(csv_file)
+                continue
+            if not Path(path).exists():
+                print(f'Warning: skipping {name}: input not found: {path}')
+                continue
+            train_one(rep, name, path, emb, X_all, Y_all_t, csv_file)
 
 
 if __name__ == '__main__':
