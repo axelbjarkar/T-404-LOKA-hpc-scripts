@@ -46,4 +46,11 @@ for script in order_positions_25p order_embeddings_10p train_mse_all aggregate; 
 done
 
 echo "outputs: $(find "$TMP/data" -type f | wc -l) files (expect 28)"
+
+echo "== reports"
+n_reports=$(find "$TMP/reports" -name report.json | wc -l)
+echo "reports: $n_reports (expect 4), index entries: $(wc -l < "$TMP/reports/index.jsonl") (expect 27)"
+bad=$(grep -L '"status": "ok"' "$TMP"/reports/*/report.json || true)
+test -z "$bad" || { echo "reports not ok: $bad"; exit 1; }
+test "$n_reports" -eq 4
 echo "CHECK OK"

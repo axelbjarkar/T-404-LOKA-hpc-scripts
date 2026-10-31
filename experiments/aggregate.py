@@ -9,6 +9,8 @@ import pandas as pd
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 
+from loka.report import ExperimentReport, config_from_globals
+
 # ---- CONFIG: input / output locations ----
 ROOT        = Path(os.environ.get("LOKA_ROOT", "/CHANGE/ME/T-404-LOKA"))
 RESULTS_DIR = ROOT / "data/ordered-data/results"   # holds fixed/ and mse_all/
@@ -149,12 +151,16 @@ PLOTS = [
 
 def main():
     os.makedirs(PLOTS_DIR, exist_ok=True)
-    for fname, plot_fn in PLOTS:
-        fig = plot_fn()
-        path = PLOTS_DIR / fname
-        fig.savefig(path, dpi=DPI)
-        plt.close(fig)
-        print(f'wrote {path}')
+    with ExperimentReport('aggregate', config=config_from_globals(globals())) as rep:
+        for csv in sorted(RESULTS_DIR.glob("*/*.csv")):  # the inputs of the plots: record which results went in
+            rep.add_data(f'{csv.parent.name}/{csv.stem}', csv)
+        for fname, plot_fn in PLOTS:
+            fig = plot_fn()
+            path = PLOTS_DIR / fname
+            fig.savefig(path, dpi=DPI)
+            plt.close(fig)
+            print(f'wrote {path}')
+            rep.add_output(path)
 
 
 if __name__ == '__main__':

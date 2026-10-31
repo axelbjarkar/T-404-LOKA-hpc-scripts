@@ -6,6 +6,7 @@ import torch
 
 from loka.data import load_breakthrough_states, save_breakthrough_states
 from loka.geometrical_methods import herding_order, k_center_order
+from loka.report import ExperimentReport, config_from_globals
 
 # ---- CONFIG: input / output locations ----
 ROOT          = Path(os.environ.get("LOKA_ROOT", "/CHANGE/ME/T-404-LOKA"))
@@ -28,18 +29,22 @@ def main():
     print(device)
     os.makedirs(ORDERED_DIR, exist_ok=True)
 
-    X, Y = load_breakthrough_states(SOURCE_STATES, two_channel=True)
-    print(f'loaded {len(X)} states from {SOURCE_STATES}')
+    with ExperimentReport('order_positions_25p', config=config_from_globals(globals())) as rep:
+        rep.add_data('source_states', SOURCE_STATES)
+        X, Y = load_breakthrough_states(SOURCE_STATES, two_channel=True)
+        print(f'loaded {len(X)} states from {SOURCE_STATES}')
 
-    for fname, method in ORDERS:
-        path = ORDERED_DIR / fname
-        if path.exists():
-            print(f'skipping {fname}: {path} already exists')
-            continue
+        for fname, method in ORDERS:
+            path = ORDERED_DIR / fname
+            if path.exists():
+                print(f'skipping {fname}: {path} already exists')
+                rep.add_skipped(path)
+                continue
 
-        order = method(X)
-        save_breakthrough_states(path, X[order], Y[order])
-        print(f'wrote {path}')
+            order = method(X)
+            save_breakthrough_states(path, X[order], Y[order])
+            print(f'wrote {path}')
+            rep.add_output(path, ratio=RATIO)
 
 
 if __name__ == '__main__':
