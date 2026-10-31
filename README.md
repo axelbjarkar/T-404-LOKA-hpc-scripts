@@ -11,6 +11,7 @@ experiments/
   order_embeddings_10p.py  + .sbatch   # same methods x 3 embeddings, 10%      -> data/ordered-data/embeddings/*.txt
   train_mse_all.py         + .sbatch   # CNN on 1%..10% prefixes, MSE on E     -> data/ordered-data/results/mse_all/*.csv
   aggregate.py             + .sbatch   # comparison plots                      -> data/plots/*.png
+  forgetting_counts.py     + .sbatch   # forgetting events per state of E      -> data/forgetting_counts/forgetting_e.txt
 ```
 
 ## Setup (once, on the login node)
@@ -34,6 +35,7 @@ sbatch experiments/order_positions_25p.sbatch
 sbatch experiments/order_embeddings_10p.sbatch
 sbatch experiments/train_mse_all.sbatch     # after both order jobs
 sbatch experiments/aggregate.sbatch         # after training
+sbatch experiments/forgetting_counts.sbatch # independent; needs data/game_states/e.txt
 ```
 
 Or chain them so each step waits for the previous one:
