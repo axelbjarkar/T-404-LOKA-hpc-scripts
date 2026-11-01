@@ -14,7 +14,7 @@ experiments/
   train_mse_herding_forgetting.py + .sbatch # herding epochs, then forgetting epochs -> data/forgetting_counts/herding_and_forgetting/*.csv
   aggregate.py             + .sbatch   # comparison plots                      -> data/plots/*.png
   forgetting_counts.py     + .sbatch   # forgetting events per state of E      -> data/forgetting_counts/forgetting_e.txt
-  partial_forgettable.py   + .sbatch   # CNN on herding subsets w/ x% forgettable -> data/ordered-data/results/partial_forgettable/*.csv
+  partial_forgettable.py   + .sbatch   # CNN on herding subsets w/ x% forgettable -> data/partial_forgettable/ (results/*.csv, forgetting_counts.txt, herding_order.txt; the last two are reused if present)
 ```
 
 ## Setup (once, on the login node)
@@ -40,7 +40,7 @@ sbatch experiments/train_mse_all.sbatch     # after both order jobs
 sbatch experiments/aggregate.sbatch         # after training
 sbatch experiments/forgetting_counts.sbatch # independent; needs data/game_states/e.txt
 sbatch experiments/train_mse_herding_forgetting.sbatch   # needs herding_25p.txt and forgetting_o.txt
-sbatch experiments/partial_forgettable.sbatch # recomputes forgetting counts from scratch
+sbatch experiments/partial_forgettable.sbatch # computes forgetting counts + herding order, or reuses the saved ones
 ```
 
 Or chain them so each step waits for the previous one:

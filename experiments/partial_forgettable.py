@@ -1,7 +1,8 @@
-"""Train the CNN on herding prefixes of o.txt where the last x% of the slots are forgettable events,
+"""Train the CNN on herding prefixes of e.txt where the last x% of the slots are forgettable events,
 MSE on all of E (ported from 'Partial Forgettable subset.ipynb').
 
-Forgetting counts are always computed from scratch here. Subsets are built in memory and not saved."""
+The forgetting counts and the herding order (indexes into E) are saved in the experiment directory and
+loaded from there on later runs if they exist (delete them to recompute). Subsets are built in memory and not saved."""
 import os
 from pathlib import Path
 
@@ -12,7 +13,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from tqdm import tqdm
 
-from loka.data import load_breakthrough_states
+from loka.data import load_breakthrough_states, load_forgetting_states, save_forgetting_states
 from loka.geometrical_methods import herding_order
 from loka.models import get_breakthrough_cnn
 from loka.report import ExperimentReport, config_from_globals
@@ -20,8 +21,11 @@ from loka.training_methods import ForgettingScores, make_forgettable_subset
 
 # ---- CONFIG: input / output locations ----
 ROOT          = Path(os.environ.get("LOKA_ROOT", "/CHANGE/ME/T-404-LOKA"))
-SOURCE_STATES = ROOT / "data/game_states/o.txt"                       # all of E
-RESULTS_DIR   = ROOT / "data/ordered-data/results/partial_forgettable"
+SOURCE_STATES = ROOT / "data/game_states/e.txt"                       # all of E
+EXPERIMENT_DIR = ROOT / "data/partial_forgettable"                    # everything this experiment writes
+RESULTS_DIR   = EXPERIMENT_DIR / "results"                            # per-ratio CSVs
+COUNTS_FILE   = EXPERIMENT_DIR / "forgetting_counts.txt"              # E with a forgetting count after each state (same format as forgetting_e.txt)
+ORDER_FILE    = EXPERIMENT_DIR / "herding_order.txt"                  # herding order: indexes into E
 
 # ---- CONFIG: experiment settings ----
 FORGETTABLE_RATIOS = [0.01, 0.05, 0.1, 0.2, 0.3]   # share of each subset (from the end) made forgettable
@@ -128,10 +132,29 @@ def main():
         X, Y = load_breakthrough_states(SOURCE_STATES)
         print(f'loaded {len(X)} states from {SOURCE_STATES}')
 
-        C = forgetting_counts(rep, X, Y)
+        if COUNTS_FILE.exists():
+            X_c, Y_c, C = load_forgetting_states(COUNTS_FILE)
+            assert np.array_equal(X_c, X) and np.array_equal(Y_c, Y), f'{COUNTS_FILE} does not match {SOURCE_STATES}'
+            C = torch.as_tensor(C, dtype=torch.int32, device=device)
+            print(f'loaded forgetting counts from {COUNTS_FILE}')
+            rep.add_data('forgetting counts', COUNTS_FILE)
+        else:
+            C = forgetting_counts(rep, X, Y)
+            save_forgetting_states(COUNTS_FILE, X, Y, C.cpu().numpy())
+            print(f'wrote {COUNTS_FILE}')
+            rep.add_output(COUNTS_FILE, input='source_states (E)')
         print(f'forgettable events: {(C != 0).float().mean().item():.1%} of E')
 
-        order = herding_order(X, END, device)   # only the largest subset's prefix is needed
+        if ORDER_FILE.exists():
+            order = np.loadtxt(ORDER_FILE, dtype=np.int64)
+            assert len(order) >= int(END * len(X)), f'{ORDER_FILE} is shorter than END * |E|'
+            print(f'loaded herding order from {ORDER_FILE}')
+            rep.add_data('herding order', ORDER_FILE)
+        else:
+            order = herding_order(X, END, device)   # only the largest subset's prefix is needed
+            np.savetxt(ORDER_FILE, order, fmt='%d')
+            print(f'wrote {ORDER_FILE}')
+            rep.add_output(ORDER_FILE, input='source_states (E)')
 
         X_t = torch.FloatTensor(X).to(device)
         Y_t = torch.FloatTensor(Y).to(device)
