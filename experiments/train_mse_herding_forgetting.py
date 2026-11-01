@@ -16,9 +16,9 @@ from loka.report import ExperimentReport, config_from_globals
 
 # ---- CONFIG: input / output locations ----
 ROOT            = Path(os.environ.get("LOKA_ROOT", "/CHANGE/ME/T-404-LOKA"))
-HERDING_FILE    = ROOT / "data/ordered-data/herding_25p.txt"
-FORGETTING_FILE = ROOT / "data/forgetting_counts/forgetting_o.txt"   # all of E, with a forgetting count per state
-RESULTS_DIR     = ROOT / "data/forgetting_counts/herding_and_forgetting"
+HERDING_FILE    = ROOT / "data/ordered-data/herding_e_25p.txt"   # from order_herding_e_25p.py
+FORGETTING_FILE = ROOT / "data/forgetting_counts/forgetting_e.txt"   # all of E, with a forgetting count per state
+RESULTS_DIR     = ROOT / "data/forgetting_counts/herding_and_forgetting_e"
 
 # ---- CONFIG: experiment settings ----
 HERDING_RATIOS = [0.95, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2]   # share of the epochs spent on herding data, the rest on forgetting data
