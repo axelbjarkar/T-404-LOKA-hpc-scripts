@@ -64,11 +64,29 @@ def forgetting_counts(rep, X, Y):
     return forgetter.getForgettingCounts()
 
 
-def train_one(rep, ratio, X_t, Y_t, C, order):
+def train(model, optimizer, loss_fn, X, Y, epochs, pbar, pbar_inc):
+    """Train on (X, Y) for `epochs` epochs, advancing pbar by pbar_inc per epoch. Returns the last batch loss."""
+    for _ in range(epochs):
+        perm = torch.randperm(len(X), device=device)   # new shuffle each epoch
+        for i in range(0, len(X), BATCH_SIZE):
+            idx = perm[i:i + BATCH_SIZE]
+            optimizer.zero_grad()
+            loss = loss_fn(model(X[idx]), Y[idx])
+            loss.backward()
+            optimizer.step()
+        pbar.update(pbar_inc)
+    return loss.item()
+
+
+def total_work(n, n_ratios):
+    """Total pbar units: every epoch of every model counts as its number of training points."""
+    return n_ratios * EPOCHS * sum(int(s * n) for s in np.linspace(START, END, num=STEPS, endpoint=True))
+
+
+def train_one(rep, ratio, X_t, Y_t, C, order, pbar):
     name = f'forgettable_{round(ratio * 100)}p'
     splits = np.linspace(START, END, num=STEPS, endpoint=True)
     mse_values, prc_values = [], []
-    pbar = tqdm(total=STEPS * EPOCHS, desc=f'training {name}')
 
     for m, s in enumerate(splits):
         S_size = int(s * len(X_t))
@@ -82,15 +100,7 @@ def train_one(rep, ratio, X_t, Y_t, C, order):
         if m == 0:
             rep.add_model(name, model, input_shape=list(X_S.shape[1:]), embedding='positions_only')
 
-        for epoch in range(EPOCHS):
-            perm = torch.randperm(len(X_S), device=device)   # new shuffle each epoch
-            for i in range(0, len(X_S), BATCH_SIZE):
-                idx = perm[i:i + BATCH_SIZE]
-                optimizer.zero_grad()
-                loss = loss_fn(model(X_S[idx]), Y_S[idx])
-                loss.backward()
-                optimizer.step()
-            pbar.update(1)
+        loss = train(model, optimizer, loss_fn, X_S, Y_S, EPOCHS, pbar, pbar_inc=len(X_S))
 
         # batched evaluation on all of E
         model.eval()
@@ -105,9 +115,8 @@ def train_one(rep, ratio, X_t, Y_t, C, order):
 
         del model, optimizer, X_S, Y_S
         torch.cuda.empty_cache()
-        pbar.set_postfix(model=f'{m+1}/{STEPS}', ratio=f'{s:.2f}', loss=f'{loss.item():.4f}', mse=f'{mse:.6f}')
+        pbar.set_postfix(model=f'{m+1}/{STEPS}', split=f'{s:.2f}', run=name, loss=f'{loss:.4f}', mse=f'{mse:.6f}')
 
-    pbar.close()
     pd.DataFrame({'ratio': prc_values, 'mse': mse_values}).to_csv(csv_path(ratio), index=False)
     print(f'wrote {csv_path(ratio)}')
     rep.add_output(csv_path(ratio), input='source_states (E)', forgettable_ratio=ratio)
@@ -158,8 +167,11 @@ def main():
 
         X_t = torch.FloatTensor(X).to(device)
         Y_t = torch.FloatTensor(Y).to(device)
+        pbar = tqdm(total=total_work(len(X_t), len(todo)), desc='training',
+                    bar_format="{l_bar}{bar} {percentage:3.0f}% [{elapsed}<{remaining}]")
         for ratio in todo:
-            train_one(rep, ratio, X_t, Y_t, C, order)
+            train_one(rep, ratio, X_t, Y_t, C, order, pbar)
+        pbar.close()
 
 
 if __name__ == '__main__':
