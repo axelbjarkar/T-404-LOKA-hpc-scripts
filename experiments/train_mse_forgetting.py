@@ -1,4 +1,4 @@
-"""Train the CNN on growing prefixes of e.txt ordered by forgetting count (highest first), MSE on all of E
+"""Train the CNN on growing prefixes of o.txt ordered by forgetting count (highest first), MSE on all of E
 (ported from 'M2/Forgetting_perf.ipynb')."""
 import os
 from pathlib import Path
@@ -15,8 +15,8 @@ from loka.models import BreakthroughCNN
 
 # ---- CONFIG: input / output locations ----
 ROOT        = Path(os.environ.get("LOKA_ROOT", "/CHANGE/ME/T-404-LOKA"))
-SOURCE_FILE = ROOT / "data/forgetting_counts/forgetting_e.txt"   # all of E, with a forgetting count per state
-RESULTS_DIR = ROOT / "data/ordered-data/results/mse_e"
+SOURCE_FILE = ROOT / "data/forgetting_counts/forgetting_o.txt"   # all of E, with a forgetting count per state
+RESULTS_DIR = ROOT / "data/ordered-data/results/mse_all"
 CSV_FILE    = RESULTS_DIR / "forgetting.csv"
 
 # ---- CONFIG: experiment settings ----

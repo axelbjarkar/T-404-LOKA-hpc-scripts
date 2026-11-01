@@ -14,8 +14,8 @@ from loka.training_methods import ForgettingScores
 
 # ---- CONFIG: input / output locations ----
 ROOT          = Path(os.environ.get("LOKA_ROOT", "/CHANGE/ME/T-404-LOKA"))
-SOURCE_STATES = ROOT / "data/game_states/e.txt"                 # all of E
-OUT_FILE      = ROOT / "data/forgetting_counts/forgetting_e.txt"
+SOURCE_STATES = ROOT / "data/game_states/o.txt"                 # all of E
+OUT_FILE      = ROOT / "data/forgetting_counts/forgetting_o.txt"
 
 # ---- CONFIG: experiment settings ----
 EPOCHS = 200

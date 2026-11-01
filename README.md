@@ -10,9 +10,8 @@ experiments/
   order_positions_25p.py   + .sbatch   # herding / k-center on positions, 25%  -> data/ordered-data/*.txt
   order_embeddings_10p.py  + .sbatch   # same methods x 3 embeddings, 10%      -> data/ordered-data/embeddings/*.txt
   train_mse_all.py         + .sbatch   # CNN on 1%..10% prefixes, MSE on E     -> data/ordered-data/results/mse_all/*.csv
-  order_herding_e_25p.py   + .sbatch   # herding on e.txt positions, 25%       -> data/ordered-data/herding_e_25p.txt
-  train_mse_forgetting.py  + .sbatch   # same, e.txt ordered by forgetting count -> data/ordered-data/results/mse_e/forgetting.csv
-  train_mse_herding_forgetting.py + .sbatch # herding epochs, then forgetting epochs, on e.txt -> data/forgetting_counts/herding_and_forgetting_e/*.csv
+  train_mse_forgetting.py  + .sbatch   # same, o.txt ordered by forgetting count -> data/ordered-data/results/mse_all/forgetting.csv
+  train_mse_herding_forgetting.py + .sbatch # herding epochs, then forgetting epochs -> data/forgetting_counts/herding_and_forgetting/*.csv
   aggregate.py             + .sbatch   # comparison plots                      -> data/plots/*.png
   forgetting_counts.py     + .sbatch   # forgetting events per state of E      -> data/forgetting_counts/forgetting_e.txt
 ```
@@ -39,9 +38,7 @@ sbatch experiments/order_embeddings_10p.sbatch
 sbatch experiments/train_mse_all.sbatch     # after both order jobs
 sbatch experiments/aggregate.sbatch         # after training
 sbatch experiments/forgetting_counts.sbatch # independent; needs data/game_states/e.txt
-sbatch experiments/order_herding_e_25p.sbatch            # needs data/game_states/e.txt
-sbatch experiments/train_mse_forgetting.sbatch           # needs forgetting_e.txt
-sbatch experiments/train_mse_herding_forgetting.sbatch   # after order_herding_e_25p; needs forgetting_e.txt
+sbatch experiments/train_mse_herding_forgetting.sbatch   # needs herding_25p.txt and forgetting_o.txt
 ```
 
 Or chain them so each step waits for the previous one:
