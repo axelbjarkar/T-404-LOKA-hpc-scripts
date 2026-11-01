@@ -14,7 +14,7 @@ experiments/
   train_mse_herding_forgetting.py + .sbatch # herding epochs, then forgetting epochs -> data/forgetting_counts/herding_and_forgetting/*.csv
   aggregate.py             + .sbatch   # comparison plots                      -> data/plots/*.png
   forgetting_counts.py     + .sbatch   # forgetting events per state of E      -> data/forgetting_counts/forgetting_e.txt
-  partial_forgettable.py   + .sbatch   # CNN on herding subsets w/ x% forgettable -> data/partial_forgettable/ (results/*.csv, forgetting_counts.txt, herding_order.txt; the last two are reused if present)
+  partial_forgettable.py   + .sbatch   # CNN on herding subsets w/ x% forgettable -> data/partial_forgettable/<source>/ (results/*.csv, forgetting_counts.txt, herding_order.txt; the last two are reused if present)
 ```
 
 ## Setup (once, on the login node)

@@ -1,4 +1,4 @@
-"""Train the CNN on herding prefixes of e.txt where the last x% of the slots are forgettable events,
+"""Train the CNN on herding prefixes of o.txt where the last x% of the slots are forgettable events,
 MSE on all of E (ported from 'Partial Forgettable subset.ipynb').
 
 The forgetting counts and the herding order (indexes into E) are saved in the experiment directory and
@@ -21,8 +21,8 @@ from loka.training_methods import ForgettingScores, make_forgettable_subset
 
 # ---- CONFIG: input / output locations ----
 ROOT          = Path(os.environ.get("LOKA_ROOT", "/CHANGE/ME/T-404-LOKA"))
-SOURCE_STATES = ROOT / "data/game_states/e.txt"                       # all of E
-EXPERIMENT_DIR = ROOT / "data/partial_forgettable"                    # everything this experiment writes
+SOURCE_STATES = ROOT / "data/game_states/o.txt"                       # all of E
+EXPERIMENT_DIR = ROOT / "data/partial_forgettable" / SOURCE_STATES.stem   # everything this experiment writes, per source file
 RESULTS_DIR   = EXPERIMENT_DIR / "results"                            # per-ratio CSVs
 COUNTS_FILE   = EXPERIMENT_DIR / "forgetting_counts.txt"              # E with a forgetting count after each state (same format as forgetting_e.txt)
 ORDER_FILE    = EXPERIMENT_DIR / "herding_order.txt"                  # herding order: indexes into E
