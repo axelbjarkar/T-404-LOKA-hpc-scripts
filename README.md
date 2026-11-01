@@ -15,6 +15,7 @@ experiments/
   aggregate.py             + .sbatch   # comparison plots                      -> data/plots/*.png
   forgetting_counts.py     + .sbatch   # forgetting events per state of E      -> data/forgetting_counts/forgetting_e.txt
   partial_forgettable.py   + .sbatch   # CNN on herding subsets w/ x% forgettable -> data/partial_forgettable/<source>/ (results/*.csv, forgetting_counts.txt, herding_order.txt; the last two are reused if present)
+  cal_herding_kcenter.py   + .sbatch   # CAL active learning inside herding / k-center prefixes -> data/cal_herding_kcenter/<source>/ (results/*.csv, *_order.txt; orders reused if present)
 ```
 
 ## Setup (once, on the login node)
@@ -41,6 +42,7 @@ sbatch experiments/aggregate.sbatch         # after training
 sbatch experiments/forgetting_counts.sbatch # independent; needs data/game_states/e.txt
 sbatch experiments/train_mse_herding_forgetting.sbatch   # needs herding_25p.txt and forgetting_o.txt
 sbatch experiments/partial_forgettable.sbatch # computes forgetting counts + herding order, or reuses the saved ones
+sbatch experiments/cal_herding_kcenter.sbatch # computes herding / k-center orders (or reuses saved), then CAL on each
 ```
 
 Or chain them so each step waits for the previous one:
