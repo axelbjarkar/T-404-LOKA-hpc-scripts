@@ -45,6 +45,9 @@ sbatch experiments/partial_forgettable.sbatch # computes forgetting counts + her
 sbatch experiments/cal_herding_kcenter.sbatch # computes herding / k-center orders (or reuses saved), then CAL on each
 ```
 
+`partial_forgettable` and `cal_herding_kcenter` default to `o.txt`; run on `e.txt` with
+`sbatch --export=ALL,LOKA_SOURCE=e experiments/<job>.sbatch` (outputs go to a per-source folder).
+
 Or chain them so each step waits for the previous one:
 ```
 a=$(sbatch --parsable experiments/order_positions_25p.sbatch)

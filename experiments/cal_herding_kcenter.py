@@ -23,7 +23,7 @@ from loka.training_methods import CAL_select
 
 # ---- CONFIG: input / output locations ----
 ROOT           = Path(os.environ.get("LOKA_ROOT", "/CHANGE/ME/T-404-LOKA"))
-SOURCE_STATES  = ROOT / "data/game_states/o.txt"                          # all of E
+SOURCE_STATES = ROOT / "data" / "game_states" / f"{os.environ.get('LOKA_SOURCE', 'o')}.txt"   # e or o; set LOKA_SOURCE to switch
 EXPERIMENT_DIR = ROOT / "data/cal_herding_kcenter" / SOURCE_STATES.stem   # everything this experiment writes, per source file
 RESULTS_DIR    = EXPERIMENT_DIR / "results"                               # one CSV per method
 
