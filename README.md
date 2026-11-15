@@ -15,6 +15,8 @@ experiments/
   aggregate.py             + .sbatch   # comparison plots                      -> data/plots/*.png
   forgetting_counts.py     + .sbatch   # forgetting events per state of E      -> data/forgetting_counts/forgetting_e.txt
   partial_forgettable.py   + .sbatch   # CNN on herding subsets w/ x% forgettable -> data/partial_forgettable/<source>/ (results/*.csv, forgetting_counts.txt, herding_order.txt; the last two are reused if present)
+  batch_nov15.py           + .sbatch   # experiment_plan.xlsx: ECH/ECK x 5 embeddings x CNN/Residual, +.AE bottleneck variants; records train_mse and mse (E) -> data/batch_nov15/<source>/ (results/<id>.csv, orders/, codes/)
+  common.py                            # shared helpers: mse(), LOKA_FORCE, embeddings, cached orders, autoencoder, 1D models
   cal_herding_kcenter.py   + .sbatch   # CAL active learning inside herding / k-center prefixes -> data/cal_herding_kcenter/<source>/ (results/*.csv, *_order.txt; orders reused if present)
 ```
 
@@ -47,6 +49,10 @@ sbatch experiments/cal_herding_kcenter.sbatch # computes herding / k-center orde
 
 `partial_forgettable` and `cal_herding_kcenter` default to `o.txt`; run on `e.txt` with
 `sbatch --export=ALL,LOKA_SOURCE=e experiments/<job>.sbatch` (outputs go to a per-source folder).
+
+`batch_nov15` runs all 40 experiments (ECH1-10, ECK1-10, each also `.AE`). Orders and autoencoder codes are computed once and cached;
+`LOKA_FORCE=1` recomputes them and the results. Pick experiments with `LOKA_EXPERIMENTS` (comma separated, wildcards):
+`sbatch --export=ALL,LOKA_EXPERIMENTS="ECH*,ECK3.AE",LOKA_FORCE=1 experiments/batch_nov15.sbatch`
 
 Or chain them so each step waits for the previous one:
 ```
