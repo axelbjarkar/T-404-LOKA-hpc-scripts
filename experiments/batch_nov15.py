@@ -23,7 +23,8 @@ from loka.report import ExperimentReport, config_from_globals
 # ---- CONFIG: input / output locations ----
 ROOT           = Path(os.environ.get("LOKA_ROOT", "/CHANGE/ME/T-404-LOKA"))
 SOURCE_STATES  = ROOT / "data" / "game_states" / f"{os.environ.get('LOKA_SOURCE', 'o')}.txt"
-EXPERIMENT_DIR = ROOT / "data/batch_nov15" / SOURCE_STATES.stem
+SMOKE          = os.environ.get("LOKA_SMOKE", "0") not in ("", "0")   # tiny run to check the pipeline; own directory
+EXPERIMENT_DIR = ROOT / ("data/batch_nov15_smoke" if SMOKE else "data/batch_nov15") / SOURCE_STATES.stem
 RESULTS_DIR    = EXPERIMENT_DIR / "results"     # <id>.csv
 ORDERS_DIR     = EXPERIMENT_DIR / "orders"      # <method>_<embedding>[_ae].txt: indexes into E
 CODES_DIR      = EXPERIMENT_DIR / "codes"       # <embedding>.npy: autoencoder bottleneck of every state in E
@@ -40,7 +41,6 @@ LR = 0.001
 SEED = 42
 OPTIMIZER = "Adam"   # torch.optim name
 LOSS = "MSELoss"     # torch.nn name
-SMOKE = os.environ.get("LOKA_SMOKE", "0") not in ("", "0")   # tiny run to check the pipeline
 if SMOKE:
     EPOCHS, AE_EPOCHS, STEPS = 2, 2, 2
 

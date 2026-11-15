@@ -16,6 +16,7 @@ experiments/
   forgetting_counts.py     + .sbatch   # forgetting events per state of E      -> data/forgetting_counts/forgetting_e.txt
   partial_forgettable.py   + .sbatch   # CNN on herding subsets w/ x% forgettable -> data/partial_forgettable/<source>/ (results/*.csv, forgetting_counts.txt, herding_order.txt; the last two are reused if present)
   batch_nov15.py           + .sbatch   # experiment_plan.xlsx: ECH/ECK x 5 embeddings x CNN/Residual, +.AE bottleneck variants; records train_mse and mse (E) -> data/batch_nov15/<source>/ (results/<id>.csv, orders/, codes/)
+  ae_diagnostics.py        + .sbatch   # why are the .AE rows weak? kNN on codes, dead dims, standardized codes, order-on-codes ablation; reads batch_nov15 codes/orders -> data/batch_nov15/<source>/diagnostics/diagnostics.csv
   common.py                            # shared helpers: mse(), LOKA_FORCE, embeddings, cached orders, autoencoder, 1D models
   cal_herding_kcenter.py   + .sbatch   # CAL active learning inside herding / k-center prefixes -> data/cal_herding_kcenter/<source>/ (results/*.csv, *_order.txt; orders reused if present)
 ```
@@ -24,13 +25,35 @@ experiments/
 
 Layout on the cluster (`PROJECT_ROOT` in `config.sh`):
 ```
-/hpchome/axels22/.venv        # existing venv with loka + torch installed
-/hpchome/axels22/data/o.txt   # copy the data over (scp/rsync)
-/hpchome/axels22/logs/        # Slurm logs (absolute path in every .sbatch)
+/hpchome/axels22/.venv                  # venv with loka + torch installed (see below)
+/hpchome/axels22/requirements.txt       # copy of T-404-LOKA-code/requirements.txt, read by setup_env.sh
+/hpchome/axels22/data/game_states/o.txt # copy the data over (scp/rsync); e.txt next to it for LOKA_SOURCE=e
+/hpchome/axels22/logs/                  # Slurm logs (absolute path in every .sbatch)
 ```
+Results, orders and reports are written under `/hpchome/axels22/data/` and `/hpchome/axels22/reports/`.
 
 Jobs run on `gpu-1xA100` (2-day limit); `gpu-8xA100` allows up to 4 days.
 If `PROJECT_ROOT` changes, update the `--output=` path in the `.sbatch` files too (`#SBATCH` lines can't read variables).
+
+### The `loka` package on the cluster
+
+The scripts import `loka` from `T-404-LOKA-code`, which `requirements.txt` pins to a git commit
+(`-e git+ssh://...T-404-LOKA-code.git@<commit>#egg=loka`). The cluster only sees code at that commit, so
+**whenever the scripts need newer `loka` code, bump the pin and reinstall**:
+```
+# on your machine: push T-404-LOKA-code, then in its requirements.txt set the new commit, copy it to the cluster
+scp requirements.txt <cluster>:/hpchome/axels22/requirements.txt
+# on the login node
+bash setup_env.sh        # uv pip install -r requirements.txt into .venv
+```
+`batch_nov15` needs `loka` from branch `m2`, commit `6881ca1` or later (`BreakthroughResNet`, `AutoEncoder`,
+`N_BOARD_FEATURES`, `with_clear_lane`). The older pin `b814777` does not have them, and the job fails on import.
+
+Before a long run, check the install inside the venv:
+`python -c "from loka.models import BreakthroughResNet, AutoEncoder; from loka.embeddings import with_clear_lane"`.
+`check_env.sbatch` only exercises the older experiments, not `batch_nov15`. For that, run a quick pipeline check
+(2 epochs, 2 splits, writes to `data/batch_nov15_smoke/`, so it never blocks the real results):
+`LOKA_SMOKE=1 LOKA_EXPERIMENTS="ECH1,ECK4.AE" sbatch experiments/batch_nov15.sbatch`
 
 ## Running
 
@@ -52,7 +75,8 @@ sbatch experiments/cal_herding_kcenter.sbatch # computes herding / k-center orde
 
 `batch_nov15` runs all 40 experiments (ECH1-10, ECK1-10, each also `.AE`). Orders and autoencoder codes are computed once and cached;
 `LOKA_FORCE=1` recomputes them and the results. Pick experiments with `LOKA_EXPERIMENTS` (comma separated, wildcards):
-`sbatch --export=ALL,LOKA_EXPERIMENTS="ECH*,ECK3.AE",LOKA_FORCE=1 experiments/batch_nov15.sbatch`
+`LOKA_EXPERIMENTS="ECH*,ECK3.AE" LOKA_FORCE=1 sbatch experiments/batch_nov15.sbatch`
+(set variables in front of `sbatch`; `--export` splits values on commas)
 
 Or chain them so each step waits for the previous one:
 ```
