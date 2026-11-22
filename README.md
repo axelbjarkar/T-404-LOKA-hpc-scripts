@@ -16,6 +16,7 @@ experiments/
   forgetting_counts.py     + .sbatch   # forgetting events per state of E      -> data/forgetting_counts/forgetting_e.txt
   partial_forgettable.py   + .sbatch   # CNN on herding subsets w/ x% forgettable -> data/partial_forgettable/<source>/ (results/*.csv, forgetting_counts.txt, herding_order.txt; the last two are reused if present)
   batch_nov15.py           + .sbatch   # experiment_plan.xlsx: ECH/ECK x 5 embeddings x CNN/Residual, +.AE bottleneck variants; records train_mse and mse (E) -> data/batch_nov15/<source>/ (results/<id>.csv, orders/, codes/)
+  board_comparison.py      + .sbatch   # 6x6 board (bt6x6_fens.txt): herding / k-center x CNN / Residual (BC1-BC4), position only; records train_mse and mse (E) -> data/board_comparison/<source>/ (results/<id>.csv, orders/)
   ae_diagnostics.py        + .sbatch   # why are the .AE rows weak? kNN on codes, dead dims, standardized codes, order-on-codes ablation; reads batch_nov15 codes/orders -> data/batch_nov15/<source>/diagnostics/diagnostics.csv
   common.py                            # shared helpers: mse(), LOKA_FORCE, embeddings, cached orders, autoencoder, 1D models
   cal_herding_kcenter.py   + .sbatch   # CAL active learning inside herding / k-center prefixes -> data/cal_herding_kcenter/<source>/ (results/*.csv, *_order.txt; orders reused if present)
@@ -49,11 +50,19 @@ bash setup_env.sh        # uv pip install -r requirements.txt into .venv
 `batch_nov15` needs `loka` from branch `m2`, commit `6881ca1` or later (`BreakthroughResNet`, `AutoEncoder`,
 `N_BOARD_FEATURES`, `with_clear_lane`). The older pin `b814777` does not have them, and the job fails on import.
 
+`board_comparison` (6x6 board) needs `loka` from branch `m2`, commit `068182e` or later (`board_size` in `BreakthroughCNN` /
+`BreakthroughResNet`; the 5x5 behaviour is unchanged). The pin line in `requirements.txt` is:
+```
+-e git+ssh://git@github.com/axelbjarkar/T-404-LOKA-code.git@068182e3cab92b6781c7a1d32e6b8e4dd5413f31#egg=loka
+```
+and the data goes in `/hpchome/axels22/data/game_states/bt6x6_fens.txt` (4.4M states, 211 MB; scp the unzipped file).
+
 Before a long run, check the install inside the venv:
 `python -c "from loka.models import BreakthroughResNet, AutoEncoder; from loka.embeddings import with_clear_lane"`.
 `check_env.sbatch` only exercises the older experiments, not `batch_nov15`. For that, run a quick pipeline check
 (2 epochs, 2 splits, writes to `data/batch_nov15_smoke/`, so it never blocks the real results):
 `LOKA_SMOKE=1 LOKA_EXPERIMENTS="ECH1,ECK4.AE" sbatch experiments/batch_nov15.sbatch`
+and for the 6x6 job `LOKA_SMOKE=1 LOKA_EXPERIMENTS="BC1,BC4" sbatch experiments/board_comparison.sbatch` (writes to `data/board_comparison_smoke/`).
 
 ## Running
 

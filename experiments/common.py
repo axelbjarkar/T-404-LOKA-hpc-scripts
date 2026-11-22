@@ -5,7 +5,10 @@
 - EMBEDDINGS: name -> function(flat (N, 50) positions) -> (N, 50 + k) features
 - get_order(): herding / k-center order, computed once and cached on disk
 - build_autoencoder() / get_codes(): conv autoencoder (as in dev/M2/AUTO ENCODER.ipynb), 10-d bottleneck codes cached on disk
-- build_model(): CNN / Residual for board features (2D), CNN1D / Residual1D for the 10-d codes
+- build_model(): CNN / Residual for board features (2D, any board size; Residual sized to the CNN's parameter count),
+  CNN1D / Residual1D for the 10-d codes
+- board_size_of(): side length of the board from a flat (N, 2 * side^2) position array (5 for o.txt, 6 for bt6x6_fens.txt)
+The autoencoder part (ToPlanes, build_autoencoder, get_codes) is still 5x5 only.
 """
 import os
 from pathlib import Path
@@ -17,8 +20,8 @@ import torch.nn.functional as F
 
 from loka.embeddings import counts, near_goal, clear_lane, with_counts, with_near_goal, with_clear_lane
 from loka.geometrical_methods import herding_order, k_center_order
-from loka.models import (AutoEncoder, BreakthroughModel, BreakthroughResNet, N_BOARD_FEATURES,
-                         get_breakthrough_cnn)
+from loka.models import (AutoEncoder, BreakthroughCNN, BreakthroughModel, BreakthroughResNet, N_BOARD_FEATURES,
+                         board_features, get_breakthrough_cnn)
 
 FORCE = os.environ.get("LOKA_FORCE", "0") not in ("", "0")
 _recomputed = set()   # paths already recomputed in this process (so a forced file is not redone per experiment)
@@ -207,12 +210,37 @@ class BreakthroughResNet1D(BreakthroughModel):
         return x.reshape(len(x), 1, -1)
 
 
-def build_model(kind, X, on_code):
+def board_size_of(X):
+    """Side length of the (square) board of a flat position array (N, 2 * side^2)."""
+    n_cells = X.reshape(len(X), -1).shape[1] // 2
+    side = int(round(n_cells ** 0.5))
+    assert 2 * side * side == X.reshape(len(X), -1).shape[1], f'{X.shape} is not (N, 2 * side^2)'
+    return side
+
+
+def _n_params(model):
+    return sum(p.numel() for p in model.parameters())
+
+
+def matched_resnet_hidden(n_extra, board_size):
+    """Hidden width of BreakthroughResNet's head so that its parameter count is closest to BreakthroughCNN's
+    (the ResNet's parameter count is linear in `hidden`, so two builds give the exact line). 115 on 5x5, 119 on 6x6."""
+    target = _n_params(BreakthroughCNN(n_extra=n_extra, board_size=board_size))
+    p1 = _n_params(BreakthroughResNet(n_extra=n_extra, board_size=board_size, hidden=1))
+    p2 = _n_params(BreakthroughResNet(n_extra=n_extra, board_size=board_size, hidden=2))
+    slope = p2 - p1
+    return max(1, round((target - (p1 - slope)) / slope))
+
+
+def build_model(kind, X, on_code, board_size=5):
     """kind: 'cnn' or 'residual'. X: (N, F) training features. on_code: X is an autoencoder code (1D models)
-    instead of 50 + k board features (2D models, input channels sized to X)."""
+    instead of 2 * board_size^2 + k board features (2D models, input channels sized to X).
+    The Residual model's head is sized to the CNN's parameter count ("residual holds same parameter count")."""
     F_ = X.reshape(len(X), -1).shape[1]
     if on_code:
         return {'cnn': BreakthroughCNN1D, 'residual': BreakthroughResNet1D}[kind](length=F_)
     if kind == 'cnn':
-        return get_breakthrough_cnn(X)
-    return BreakthroughResNet(n_extra=F_ - N_BOARD_FEATURES)
+        return get_breakthrough_cnn(X, board_size=board_size)
+    n_extra = F_ - board_features(board_size)
+    return BreakthroughResNet(n_extra=n_extra, board_size=board_size,
+                              hidden=matched_resnet_hidden(n_extra, board_size))
