@@ -13,7 +13,12 @@ Results in $LOKA_ROOT/data/error_analysis[_smoke]/<source>/:
   bins.csv         per model/seed and forgetting-count bin (and in S / not in S): state share, mean error, error share
   gain_curve.csv   cumulative state share -> cumulative error share, states sorted by count (high first) and by true error (oracle)
 Settings by environment: LOKA_MODELS="cnn,residual", LOKA_METHOD=herding|k_center, LOKA_RATIO=0.1, LOKA_SEEDS=3,
-LOKA_ORDERS_DIR, LOKA_SMOKE=1 (first 100k states, 2 epochs, own directory and orders)."""
+LOKA_ORDERS_DIR, LOKA_SMOKE=1 (first 100k states, 2 epochs, own directory and orders).
+
+LOKA_CAL=1 additionally checks whether a label-free CAL score finds the hard states. Pool = E minus S; every pool state gets the mean
+|prediction(neighbour) - prediction(state)| over its LOKA_CAL_K (20) nearest states in S (labels of the pool are never used), with distances in
+LOKA_CAL_SPACES="raw,penultimate" (raw positions / inputs of the model's last Linear). cal_summary.csv and cal_gain_curve.csv report, on the
+pool only, the error share held by the top 1% / 5% states for each sorter (cal_*, forgetting count and true error as oracles, random)."""
 import os
 from pathlib import Path
 
@@ -24,6 +29,7 @@ import torch.nn as nn
 
 from common import board_size_of, build_model, get_order, mse
 from loka.data import load_breakthrough_states
+from loka.training_methods import CAL_scores
 
 # ---- CONFIG: input / output locations ----
 ROOT          = Path(os.environ.get("LOKA_ROOT", "/CHANGE/ME/T-404-LOKA"))
@@ -45,6 +51,10 @@ EVAL_BS = 8192
 LR = 0.001
 SEED = 42
 N_SMOKE = 100_000
+CAL = os.environ.get("LOKA_CAL", "0") not in ("", "0")
+CAL_K = int(os.environ.get("LOKA_CAL_K", "20"))
+CAL_SPACES = [x for x in os.environ.get("LOKA_CAL_SPACES", "raw,penultimate").split(",") if x]
+HARD = 11             # forgetting count that counts as "hard" for precision / recall
 if SMOKE:
     EPOCHS, N_SEEDS = 2, 1
 
@@ -107,6 +117,31 @@ def gain_rows(err, counts, model, seed, points=1000):
     return rows
 
 
+def cal_rows(err, counts, in_s, scores_by_space, model, seed, rng):
+    """Error share of the top 1% / 5% of the pool (E minus S) per sorter, precision / recall against count >= HARD, gain curves."""
+    pool = ~in_s
+    e, c = err[pool], counts[pool]
+    sorters = {f'cal_{space}': sc for space, sc in scores_by_space.items()}
+    sorters.update({'forgetting (oracle)': c.astype(np.float64), 'true error (oracle)': e, 'random': rng.random(len(e))})
+    hard = c >= HARD
+    rows, curves = [], []
+    n = len(e)
+    pos = np.unique(np.linspace(0, n, 1001).astype(int))[1:]
+    for name, score in sorters.items():
+        order = np.argsort(-score, kind='stable')
+        cum = np.cumsum(e[order]) / e.sum()
+        row = dict(model=model, seed=seed, sorter=name, pool_states=n, pool_mse=e.mean(),
+                   spearman=pd.Series(score).corr(pd.Series(e), method='spearman'))
+        for frac in (0.01, 0.05):
+            top = order[:max(1, int(frac * n))]
+            row[f'top{int(frac * 100)}_error_share'] = cum[len(top) - 1]
+            row[f'top{int(frac * 100)}_precision_hard'] = hard[top].mean()
+            row[f'top{int(frac * 100)}_recall_hard'] = hard[top].sum() / max(1, hard.sum())
+        rows.append(row)
+        curves += [dict(model=model, seed=seed, sorted_by=name, state_share=p / n, error_share=cum[p - 1]) for p in pos]
+    return rows, curves
+
+
 def main():
     print(device, f'| {METHOD} {RATIO:.0%} | models {MODELS} | seeds {N_SEEDS}', '| SMOKE' if SMOKE else '', flush=True)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -128,7 +163,9 @@ def main():
     in_s[idx.cpu().numpy()] = True
     X_S, Y_S = X_t[idx], Y_t[idx]
 
-    summary, bins, gains = [], [], []
+    summary, bins, gains, cal_summary, cal_gains = [], [], [], [], []
+    rng = np.random.default_rng(SEED)
+    pool_idx = torch.as_tensor(np.flatnonzero(~in_s), device=device)
     for kind in MODELS:
         for k in range(N_SEEDS):
             seed = SEED + k
@@ -144,12 +181,24 @@ def main():
             bins += bin_rows(err, counts, in_s, kind, seed)
             gains += gain_rows(err, counts, kind, seed)
             print(summary[-1], flush=True)
+            if CAL:
+                scores = {space: CAL_scores(model, X_S, X_t[pool_idx], CAL_K, bs=EVAL_BS, space=space).cpu().numpy().astype(np.float64)
+                          for space in CAL_SPACES}
+                rows, curves = cal_rows(err, counts, in_s, scores, kind, seed, rng)
+                cal_summary += rows
+                cal_gains += curves
+                print(pd.DataFrame(rows)[['sorter', 'spearman', 'top1_error_share', 'top5_error_share', 'top5_precision_hard']].round(3).to_string(index=False), flush=True)
             del model
             torch.cuda.empty_cache()
 
     pd.DataFrame(summary).to_csv(OUT_DIR / 'summary.csv', index=False)
     pd.DataFrame(bins).to_csv(OUT_DIR / 'bins.csv', index=False)
     pd.DataFrame(gains).to_csv(OUT_DIR / 'gain_curve.csv', index=False)
+    if CAL:
+        pd.DataFrame(cal_summary).to_csv(OUT_DIR / 'cal_summary.csv', index=False)
+        pd.DataFrame(cal_gains).to_csv(OUT_DIR / 'cal_gain_curve.csv', index=False)
+        print(pd.DataFrame(cal_summary).groupby(['model', 'sorter'], sort=False)[['spearman', 'top1_error_share', 'top5_error_share',
+              'top5_precision_hard', 'top5_recall_hard']].mean().round(3))
     print(pd.DataFrame(bins).query("subset == 'all'").groupby(['model', 'bin'], sort=False)[['state_share', 'mean_error', 'error_share']].mean().round(4))
     print(f'wrote {OUT_DIR}')
 

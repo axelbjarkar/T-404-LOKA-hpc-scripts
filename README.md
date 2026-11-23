@@ -18,7 +18,7 @@ experiments/
   batch_nov15.py           + .sbatch   # experiment_plan.xlsx: ECH/ECK x 5 embeddings x CNN/Residual, +.AE bottleneck variants; records train_mse and mse (E) -> data/batch_nov15/<source>/ (results/<id>.csv, orders/, codes/)
   board_comparison.py      + .sbatch   # 6x6 board (bt6x6_fens.txt): herding / k-center x CNN / Residual (BC1-BC4), position only; records train_mse and mse (E) -> data/board_comparison/<source>/ (results/<id>.csv, orders/)
   resnet_size.py           + .sbatch   # o.txt (5x5): ResNet with 1-4 extra residual blocks, herding (RSZH01-04) / k-center (RSZK01-04), position only -> data/resnet_size/o/ (results/<id>.csv, orders/); LOKA_SMOKE=1 uses 100k states
-  error_analysis.py        + .sbatch   # where does the error on E sit? CNN / Residual trained on herding 10% of o.txt, error per state binned by forgetting count (needs data/forgetting_counts/forgetting_o.txt) -> data/error_analysis/o/ (summary.csv, bins.csv, gain_curve.csv)
+  error_analysis.py        + .sbatch   # where does the error on E sit? CNN / Residual trained on herding 10% of o.txt, error per state binned by forgetting count (needs data/forgetting_counts/forgetting_o.txt) -> data/error_analysis/o/ (summary.csv, bins.csv, gain_curve.csv); LOKA_CAL=1 adds cal_summary.csv / cal_gain_curve.csv (label-free CAL score vs the hard states)
   ae_diagnostics.py        + .sbatch   # why are the .AE rows weak? kNN on codes, dead dims, standardized codes, order-on-codes ablation; reads batch_nov15 codes/orders -> data/batch_nov15/<source>/diagnostics/diagnostics.csv
   common.py                            # shared helpers: mse(), LOKA_FORCE, embeddings, cached orders, autoencoder, 1D models
   cal_herding_kcenter.py   + .sbatch   # CAL active learning inside herding / k-center prefixes -> data/cal_herding_kcenter/<source>/ (results/*.csv, *_order.txt; orders reused if present)
@@ -53,9 +53,10 @@ bash setup_env.sh        # uv pip install -r requirements.txt into .venv
 `N_BOARD_FEATURES`, `with_clear_lane`). The older pin `b814777` does not have them, and the job fails on import.
 
 `board_comparison` (6x6 board) needs `loka` from branch `m2`, commit `068182e` or later (`board_size` in `BreakthroughCNN` /
-`BreakthroughResNet`; the 5x5 behaviour is unchanged). The pin line in `requirements.txt` is:
+`BreakthroughResNet`; the 5x5 behaviour is unchanged). `error_analysis` with `LOKA_CAL=1` needs `2afdd5e` or later (`CAL_scores`).
+The pin line in `requirements.txt` that covers all of them is:
 ```
--e git+ssh://git@github.com/axelbjarkar/T-404-LOKA-code.git@068182e3cab92b6781c7a1d32e6b8e4dd5413f31#egg=loka
+-e git+ssh://git@github.com/axelbjarkar/T-404-LOKA-code.git@2afdd5ef64a8a30e9fd0b4c426da05151c192c2f#egg=loka
 ```
 and the data goes in `/hpchome/axels22/data/game_states/bt6x6_fens.txt` (4.4M states, 211 MB; scp the unzipped file).
 

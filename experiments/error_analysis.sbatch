@@ -8,6 +8,7 @@
 # Error on E by forgetting count (CNN and Residual, herding 10%); needs data/forgetting_counts/forgetting_o.txt and the cached batch_nov15 orders.
 # Submit from the hpc-scripts dir: sbatch experiments/error_analysis.sbatch
 #   a subset:         LOKA_MODELS="cnn" sbatch experiments/error_analysis.sbatch
+#   + CAL check (does a label-free CAL score find the hard states?): LOKA_CAL=1 sbatch experiments/error_analysis.sbatch   (LOKA_CAL_SPACES="raw,penultimate", LOKA_CAL_K=20)
 #   quick pipeline check (2 epochs, own data dir): LOKA_SMOKE=1 LOKA_MODELS="cnn" sbatch experiments/error_analysis.sbatch
 # (sbatch passes the environment on; do not use --export for these, it splits values on commas)
 set -euo pipefail
