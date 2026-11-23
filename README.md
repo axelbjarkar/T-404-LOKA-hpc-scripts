@@ -17,6 +17,7 @@ experiments/
   partial_forgettable.py   + .sbatch   # CNN on herding subsets w/ x% forgettable -> data/partial_forgettable/<source>/ (results/*.csv, forgetting_counts.txt, herding_order.txt; the last two are reused if present)
   batch_nov15.py           + .sbatch   # experiment_plan.xlsx: ECH/ECK x 5 embeddings x CNN/Residual, +.AE bottleneck variants; records train_mse and mse (E) -> data/batch_nov15/<source>/ (results/<id>.csv, orders/, codes/)
   board_comparison.py      + .sbatch   # 6x6 board (bt6x6_fens.txt): herding / k-center x CNN / Residual (BC1-BC4), position only; records train_mse and mse (E) -> data/board_comparison/<source>/ (results/<id>.csv, orders/)
+  resnet_size.py           + .sbatch   # o.txt (5x5): ResNet with 1-4 extra residual blocks, herding (RSZH01-04) / k-center (RSZK01-04), position only -> data/resnet_size/o/ (results/<id>.csv, orders/); LOKA_SMOKE=1 uses 100k states
   ae_diagnostics.py        + .sbatch   # why are the .AE rows weak? kNN on codes, dead dims, standardized codes, order-on-codes ablation; reads batch_nov15 codes/orders -> data/batch_nov15/<source>/diagnostics/diagnostics.csv
   common.py                            # shared helpers: mse(), LOKA_FORCE, embeddings, cached orders, autoencoder, 1D models
   cal_herding_kcenter.py   + .sbatch   # CAL active learning inside herding / k-center prefixes -> data/cal_herding_kcenter/<source>/ (results/*.csv, *_order.txt; orders reused if present)
