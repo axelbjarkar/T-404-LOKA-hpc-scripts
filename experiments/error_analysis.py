@@ -17,7 +17,7 @@ LOKA_ORDERS_DIR, LOKA_SMOKE=1 (first 100k states, 2 epochs, own directory and or
 
 LOKA_CAL=1 additionally checks whether a label-free CAL score finds the hard states. Pool = E minus S; every pool state gets the mean
 |prediction(neighbour) - prediction(state)| over its LOKA_CAL_K (20) nearest states in S (labels of the pool are never used), with distances in
-LOKA_CAL_SPACES="raw,penultimate" (raw positions / inputs of the model's last Linear). cal_summary.csv and cal_gain_curve.csv report, on the
+LOKA_CAL_SPACES="raw,penultimate", LOKA_CAL_CHUNK=1024 (raw positions / inputs of the model's last Linear). cal_summary.csv and cal_gain_curve.csv report, on the
 pool only, the error share held by the top 1% / 5% states for each sorter (cal_*, forgetting count and true error as oracles, random)."""
 import os
 from pathlib import Path
@@ -53,6 +53,7 @@ SEED = 42
 N_SMOKE = 100_000
 CAL = os.environ.get("LOKA_CAL", "0") not in ("", "0")
 CAL_K = int(os.environ.get("LOKA_CAL_K", "20"))
+CAL_CHUNK = int(os.environ.get("LOKA_CAL_CHUNK", "1024"))   # pool states per distance block; lower it if the GPU runs out of memory
 CAL_SPACES = [x for x in os.environ.get("LOKA_CAL_SPACES", "raw,penultimate").split(",") if x]
 HARD = 11             # forgetting count that counts as "hard" for precision / recall
 if SMOKE:
@@ -182,7 +183,7 @@ def main():
             gains += gain_rows(err, counts, kind, seed)
             print(summary[-1], flush=True)
             if CAL:
-                scores = {space: CAL_scores(model, X_S, X_t[pool_idx], CAL_K, bs=EVAL_BS, space=space).cpu().numpy().astype(np.float64)
+                scores = {space: CAL_scores(model, X_S, X_t[pool_idx], CAL_K, chunk=CAL_CHUNK, bs=EVAL_BS, space=space).cpu().numpy().astype(np.float64)
                           for space in CAL_SPACES}
                 rows, curves = cal_rows(err, counts, in_s, scores, kind, seed, rng)
                 cal_summary += rows
